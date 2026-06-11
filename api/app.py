@@ -4,7 +4,10 @@ from contextlib import asynccontextmanager
 import time
 import logging
 import numpy as np
-from model_utils import load_artifacts,preprocess_input,get_risk_level
+from api.model_utils import preprocess_input,get_risk_level
+import os
+import joblib
+from pathlib import Path
 
 #setup logging
 logging.basicConfig(level=logging.INFO)
@@ -56,7 +59,17 @@ class PredictionResponse(BaseModel):
 async def  lifespan(app:FastAPI):
     #runs when server starts
     logger.info('loading model')
-    app.state.model,app.state.scaler,app.state.features=load_artifacts()
+    #works both locally and  in docker 
+    base_path = Path(__file__).parent.parent
+
+    model_path   = base_path / "models" / "fraud_model_xgb.pkl"
+    scaler_path  = base_path / "models" / "scaler.pkl"
+    features_path = base_path / "models" / "feature_names.pkl"
+
+    app.state.model    = joblib.load(model_path)
+    app.state.scaler   = joblib.load(scaler_path)
+    app.state.features = joblib.load(features_path)
+    
     logger.info('model loaded sucessfully')
     yield
     #runs when server stops
@@ -71,7 +84,7 @@ app=FastAPI(
 )
 
 #health check
-app.get("/Health")
+@app.get("/health")
 async def health():
     return {
         "status":"healthy",
@@ -105,9 +118,9 @@ async def predict (request:TransactionRequest):
 
         # log every prediction
         logger.info(
-           f"prediction={prediction}",
-           f" probability={round(probability,4)}",
-           f" risk_level={risk_level}",
+           f"prediction={prediction}"
+           f" probability={round(probability,4)}"
+           f" risk_level={risk_level}"
            f" latency_ms={round(latency_ms,2)}ms"
         )
         return PredictionResponse(

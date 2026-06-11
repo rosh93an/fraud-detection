@@ -1,0 +1,9 @@
+data/
+models/
+__pycache__/
+*.pyc
+.env
+mlruns/
+*.csv
+data/processed/
+data/processedagain/

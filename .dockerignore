@@ -1,0 +1,10 @@
+data/
+notebooks/
+mlruns/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.ipynb
+tests/
+.env

@@ -3,17 +3,17 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-#paths
-MODEL_PATH=Path('../models/fraud_model_xgb.pkl')
-SCALER_PATH=Path('../models/scaler.pkl')
-FEATURE_PATH=Path('../models/feature_names.pkl')
+#paths these works onnly in local we updated it into app.py 
+#MODEL_PATH=Path('../models/fraud_model_xgb.pkl')
+#SCALER_PATH=Path('../models/scaler.pkl')
+#FEATURE_PATH=Path('../models/feature_names.pkl')
 
-def load_artifacts():
-    'load model,scaler,features'
-    model=joblib.load(MODEL_PATH)
-    scaler=joblib.load(SCALER_PATH)
-    Feature=joblib.load(FEATURE_PATH)
-    return model,scaler,Feature
+#def load_artifacts():
+  #  'load model,scaler,features'
+  #  model=joblib.load(MODEL_PATH)
+  #  scaler=joblib.load(SCALER_PATH)
+  #  Feature=joblib.load(FEATURE_PATH)
+  #  return model,scaler,Feature
 
 
 def preprocess_input(data:dict,scaler)-> np.ndarray:
