@@ -7,9 +7,9 @@ services:
      ports:
        - "8000:8000"
      volumes:
-       - ./models:/app/models
+       - ./models:/app/models #host path  container path
      environment:
-       - PYTHONUNBUFFERED=1
+       - PYTHONUNBUFFERED=1  #Setting PYTHONUNBUFFERED=1 as an environment variable forces the Python interpreter to send its output (stdout and stderr) directly to your terminal or log files immediately, rather than storing it in a temporary internal buffer
      restart: unless-stopped
      healthcheck:
        test: ["CMD","curl","-f","http://localhost:8000/health"]
