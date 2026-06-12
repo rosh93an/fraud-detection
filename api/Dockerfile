@@ -9,16 +9,20 @@ WORKDIR /app
 #docker caches layers
 #if requirements dont change skip reinstall
 #faster rebuilds only when code changes
-COPY requirements.txt .
+COPY requirements_api.txt .
 
 # install python libraries
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements_api.txt
 
 #copy model files 
 COPY models/ ./models/
 
 #copy apicode
 COPY api/ ./api/
+
+# Ensure Python can resolve the api directory module path
+ENV PYTHONPATH=/app
+
 
 #tell docker which code app uses 
 EXPOSE 8000

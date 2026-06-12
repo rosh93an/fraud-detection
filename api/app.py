@@ -8,6 +8,7 @@ from api.model_utils import preprocess_input,get_risk_level
 import os
 import joblib
 from pathlib import Path
+from api.database import create_table, save_prediction, get_stats
 
 #setup logging
 logging.basicConfig(level=logging.INFO)
@@ -71,6 +72,9 @@ async def  lifespan(app:FastAPI):
     app.state.features = joblib.load(features_path)
     
     logger.info('model loaded sucessfully')
+
+    #db
+    create_table()
     yield
     #runs when server stops
     logger.info('server shutting down')
@@ -110,7 +114,7 @@ async def predict (request:TransactionRequest):
         probability=float(
             app.state.model.predict_proba(features)[0,1]
         )
-        prediction="Fraud" if probability>=0.5 else "Normal"
+        prediction="FRAUD" if probability>=0.5 else "NORMAL"
         risk_level=get_risk_level(probability)
 
         #calculate latency
@@ -123,6 +127,16 @@ async def predict (request:TransactionRequest):
            f" risk_level={risk_level}"
            f" latency_ms={round(latency_ms,2)}ms"
         )
+
+        #save to post gre sql 
+        save_prediction(
+            prediction=prediction,
+            probability=probability,
+            risk_level=risk_level,
+            amount=data.get('Amount', 0),
+            latency_ms=latency_ms
+        )
+
         return PredictionResponse(
             prediction=prediction,
             probability=round(probability,4),
@@ -144,6 +158,11 @@ async def root():
         "docs":"/docs",
         "health": "/health"
     }
+
+@app.get("/stats")
+async def stats():
+    """Get prediction statistics from database"""
+    return get_stats()
         
 
 
