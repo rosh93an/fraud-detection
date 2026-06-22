@@ -37,12 +37,18 @@ def preprocess_input(data:dict,scaler)-> np.ndarray:
         labels=[0, 1, 2, 3, 4],
         include_lowest=True
     ).astype(float)
+
+    engineered = {
+        'Hour': float(df['Hour'].iloc[0]),
+        'Amount_log': float(df['Amount_log'].iloc[0]),
+        'Amount_bin': float(df['Amount_bin'].iloc[0])
+    }
     # Drop original Time and Amount
     df = df.drop(['Time', 'Amount'], axis=1)
     # Scale
     scale_cols = ['Amount_log', 'Hour']
     df[scale_cols] = scaler.transform(df[scale_cols])
-    return df.values
+    return df.values,engineered
 
 def get_risk_level(probability:float):
     """Convert probability to risk level"""

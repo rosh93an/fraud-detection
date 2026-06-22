@@ -105,7 +105,7 @@ async def predict (request:TransactionRequest):
         #convert  request to dict
         data=request.model_dump()
         #preprocess
-        features=preprocess_input(
+        features,engineered=preprocess_input(
             data,
             app.state.scaler
         )
@@ -119,6 +119,11 @@ async def predict (request:TransactionRequest):
 
         #calculate latency
         latency_ms=(time.time()-start)*1000
+
+        # Merge original V1-V28 with engineered features for storage
+
+        full_data = {**data, **engineered}
+
 
         # log every prediction
         logger.info(
@@ -134,7 +139,8 @@ async def predict (request:TransactionRequest):
             probability=probability,
             risk_level=risk_level,
             amount=data.get('Amount', 0),
-            latency_ms=latency_ms
+            latency_ms=latency_ms,
+            raw_data=full_data
         )
 
         return PredictionResponse(
