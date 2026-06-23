@@ -7,7 +7,7 @@ logger=logging.getLogger(__name__)
 
 def get_db_connection():
     database_url=os.getenv(
-        "DATABASE URL","postgresql://frauduser:fraudpass@db:5432/frauddb"
+        "DATABASE_URL","postgresql://frauduser:fraudpass@db:5432/frauddb"
     )
     return psycopg2.connect(database_url)
 
