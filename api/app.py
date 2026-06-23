@@ -160,7 +160,7 @@ async def predict (request:TransactionRequest):
 @app.get("/")
 async def root():
     return {
-        "message":"fraud Detection API",
+        "message":"fraud Detection API - Auto-Deployed via CI/CD ",
         "docs":"/docs",
         "health": "/health"
     }
