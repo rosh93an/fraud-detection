@@ -42,13 +42,16 @@ def test_preprocess_output_shape(tmp_path):
         'V25': 0.06, 'V26': -0.17,'V27': -0.12,
         'V28': -0.03,'Amount': 149.62
     }
-    result = preprocess_input(transaction, scaler)
+    result, engineered= preprocess_input(transaction, scaler)
     
 
     # Should return 2D array
     assert result.ndim == 2
     # Should have 31 features
     assert result.shape[1] == 31
+    assert isinstance(engineered, dict)
+    assert 'Hour' in engineered
+    assert 'Amount_log' in engineered
     print(f"Output shape: {result.shape} ✅")
 
     
@@ -80,8 +83,9 @@ def test_hour_feature():
         'V28': 0.0,'Amount': 10.0
     }
 
-    result = preprocess_input(transaction, scaler)
+    result, engineered = preprocess_input(transaction, scaler)
     assert result is not None
+    assert engineered is not None
     print("Hour feature test passed ✅")
 
 
