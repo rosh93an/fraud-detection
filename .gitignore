@@ -11,3 +11,4 @@ data/processedagain/
 */.ipynb_checkpoints/
 mlflow.db
 
+notebooks/*.html
