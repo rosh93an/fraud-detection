@@ -21,6 +21,7 @@ services:
 
   fraud-api:
     build: .
+    env_file: .env
     container_name: fraud-detection-api
     ports:
       - "8000:8000"
@@ -68,6 +69,7 @@ services:
 
   fraud-consumer:
     build: .
+    env_file: .env
     container_name: fraud-streaming-consumer
     command: ["python", "Kafka_scripts/kafka_consumer.py"]
     volumes:

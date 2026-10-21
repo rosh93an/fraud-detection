@@ -7,6 +7,8 @@ import numpy as np
 import joblib
 from pathlib import Path
 from api.database import create_table, save_prediction, get_stats
+from api.forensic_agent import generate_forensic_memo
+from typing import Optional, Any
 from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
 
 #setup logging
@@ -52,6 +54,7 @@ class PredictionResponse(BaseModel):
     probability: float
     risk_level:str
     top_factors: list[dict] = []
+    forensic_memo: Optional[str] = None
     latency_ms:float
 
 #load model at startup
@@ -145,20 +148,31 @@ async def predict (request:TransactionRequest):
         )
         # Only compute SHAP if high probability or medium risk (to keep latency < 10ms for safe traffic)
         top_factors = []
+        forensic_memo = None
         if probability >= 0.5:
-              top_factors = get_top_shap_factors(
+            top_factors = get_top_shap_factors(
                 features, 
                 app.state.explainer, 
                 app.state.features, 
                 top_n=5
             )
-
+            # Generate AI Forensic Memo for high-risk alerts
+            if probability >= 0.70:
+                forensic_memo = generate_forensic_memo(
+                    txn_id="LIVE",
+                    amount=data.get('Amount', 0.0),
+                    prediction=prediction,
+                    probability=probability,
+                    risk_level=risk_level,
+                    top_factors=top_factors
+                )
 
         return PredictionResponse(
             prediction=prediction,
             probability=round(probability,4),
             risk_level=risk_level,
             top_factors=top_factors,
+            forensic_memo=forensic_memo,
             latency_ms=round(latency_ms,2)
         )
     except Exception as e:
@@ -170,6 +184,32 @@ async def predict (request:TransactionRequest):
     
     
 #--root--
+
+class InvestigateRequest(BaseModel):
+    txn_id: Any = "LIVE"
+    amount: float = 0.0
+    prediction: str = "FRAUD"
+    probability: float = 0.95
+    risk_level: str = "HIGH PROBABILITY"
+    top_factors: list[dict] = []
+
+class InvestigateResponse(BaseModel):
+    txn_id: Any
+    forensic_memo: str
+
+@app.post("/investigate", response_model=InvestigateResponse)
+async def investigate(req: InvestigateRequest):
+    """GenAI Forensic Investigator Agent: Generate an audit-ready compliance memo."""
+    memo = generate_forensic_memo(
+        txn_id=req.txn_id,
+        amount=req.amount,
+        prediction=req.prediction,
+        probability=req.probability,
+        risk_level=req.risk_level,
+        top_factors=req.top_factors,
+    )
+    return InvestigateResponse(txn_id=req.txn_id, forensic_memo=memo)
+
 @app.get("/")
 async def root():
     return {

@@ -12,3 +12,7 @@ psycopg2-binary==2.9.12
 pytest
 kafka-python
 shap>=0.45.0
+
+groq>=0.9.0
+google-generativeai>=0.8.0
+python-dotenv>=1.0.0
