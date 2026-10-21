@@ -297,6 +297,16 @@ with tab1:
             st.metric("Fraud Probability", f"{prob:.2%}", delta=f"Latency: {latency:.2f} ms")
             st.progress(float(prob))
 
+            # ⚖️ LLM-as-a-Judge Regulatory Audit Verdict
+            st.markdown("#### ⚖️ LLM-as-a-Judge: RBI Audit Verdict")
+            rbi_route = jev.get("rbi_compliance_route", "STANDARD_CLEARING_ROUTE")
+            if action == "APPROVE_INSTANT":
+                st.info(f"⚖️ **Verdict: COMPLIANT (PASS)**  \n*Directive*: `{rbi_route}` — Benign parameters adhere to standard digital payment clearing guidelines.")
+            elif action == "STEP_UP_2FA_CHALLENGE":
+                st.warning(f"⚖️ **Verdict: AFA MANDATE ENFORCED**  \n*Directive*: `{rbi_route}` — Mandates additional factor authentication prior to fund release.")
+            else:
+                st.error(f"⚖️ **Verdict: ZERO LIABILITY INTERCEPT**  \n*Directive*: `{rbi_route}` — Immediate freeze initiated to prevent customer debit under RBI DPSS guidelines.")
+
             st.markdown("#### System-1 Jev Policy Metadata")
             st.json({
                 "action": action,
@@ -452,6 +462,13 @@ with tab2:
         available_cols = [c for c in cols_to_show if c in df_feed.columns]
         
         st.dataframe(df_feed[available_cols], use_container_width=True, hide_index=True)
+        csv_data = df_feed.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Audit Ledger (CSV)",
+            data=csv_data,
+            file_name=f"sentinelpay_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv"
+        )
     else:
         st.info("No audit records found in PostgreSQL yet. Run simulations in Tab 1 or publish Kafka messages to generate live records.")
 
