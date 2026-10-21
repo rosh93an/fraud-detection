@@ -7,8 +7,8 @@ import numpy as np
 import joblib
 from pathlib import Path
 from api.database import create_table, save_prediction, get_stats
-from api.forensic_agent import generate_forensic_memo
-from typing import Optional, Any
+from api.forensic_agent import generate_forensic_memo, evaluate_jev_decision
+from typing import Optional, Any, Dict
 from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
 
 #setup logging
@@ -54,6 +54,7 @@ class PredictionResponse(BaseModel):
     probability: float
     risk_level:str
     top_factors: list[dict] = []
+    jev_decision: Optional[Dict[str, Any]] = None
     forensic_memo: Optional[str] = None
     latency_ms:float
 
@@ -167,11 +168,19 @@ async def predict (request:TransactionRequest):
                     top_factors=top_factors
                 )
 
+        jev_decision = evaluate_jev_decision(
+            probability=probability,
+            amount=data.get('Amount', 0.0),
+            hour=engineered.get('Hour'),
+            top_factors=top_factors
+        )
+
         return PredictionResponse(
             prediction=prediction,
             probability=round(probability,4),
             risk_level=risk_level,
             top_factors=top_factors,
+            jev_decision=jev_decision,
             forensic_memo=forensic_memo,
             latency_ms=round(latency_ms,2)
         )
@@ -192,9 +201,11 @@ class InvestigateRequest(BaseModel):
     probability: float = 0.95
     risk_level: str = "HIGH PROBABILITY"
     top_factors: list[dict] = []
+    jev_decision: Optional[Dict[str, Any]] = None
 
 class InvestigateResponse(BaseModel):
     txn_id: Any
+    jev_decision: Optional[Dict[str, Any]] = None
     forensic_memo: str
 
 @app.post("/investigate", response_model=InvestigateResponse)
@@ -208,7 +219,12 @@ async def investigate(req: InvestigateRequest):
         risk_level=req.risk_level,
         top_factors=req.top_factors,
     )
-    return InvestigateResponse(txn_id=req.txn_id, forensic_memo=memo)
+    jev_decision = evaluate_jev_decision(
+        probability=req.probability,
+        amount=req.amount,
+        top_factors=req.top_factors,
+    )
+    return InvestigateResponse(txn_id=req.txn_id, jev_decision=jev_decision, forensic_memo=memo)
 
 @app.get("/")
 async def root():

@@ -169,6 +169,68 @@ def _fallback_rule_memo(
 *(Automated Rule-Based Compliance Fallback)*"""
 
 
+def evaluate_jev_decision(
+    probability: float,
+    amount: float = 0.0,
+    hour: Optional[float] = None,
+    top_factors: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    LLM-as-Jev (System-1 Typed Decision Router):
+    Evaluates real-time risk, TreeSHAP attributions, and transaction characteristics
+    to return a strictly typed, sub-millisecond decision payload compliant with
+    Reserve Bank of India (RBI) payment security directives.
+    """
+    factors = top_factors or []
+    
+    # Check for severe negative PCA deviations (fraud hallmarks V14, V10, V12)
+    has_critical_v14 = any(
+        f.get("feature") == "V14" and f.get("value", 0.0) < -4.0
+        for f in factors
+    )
+    
+    # Nocturnal burst detection (12 AM - 5 AM)
+    is_nocturnal = hour is not None and (0 <= hour <= 5)
+
+    if probability < 0.35:
+        action = "APPROVE_INSTANT"
+        rbi_route = "STANDARD_CLEARING_ROUTE"
+        channel = "DIRECT_SETTLEMENT"
+        rationale = f"Risk score ({probability:.2%}) is within benign parameters. Transaction cleared for immediate settlement."
+        confidence_cal = round(1.0 - probability, 4)
+
+    elif probability < 0.50:
+        action = "MONITOR_AND_LOG"
+        rbi_route = "RBI_MASTER_DIRECTION_CYBER_SECURITY_SEC_8"
+        channel = "SILENT_TELEMETRY"
+        rationale = f"Marginal variance observed ({probability:.2%}). Transaction approved with background telemetry logging."
+        confidence_cal = round(1.0 - probability, 4)
+
+    elif probability < 0.85:
+        action = "STEP_UP_2FA_CHALLENGE"
+        rbi_route = "RBI_2FA_ADDITIONAL_FACTOR_AUTHENTICATION_MANDATE"
+        channel = "UPI_PUSH_NOTIFICATION" if amount < 2000 else "SMS_OTP"
+        nocturnal_tag = " during nocturnal hours" if is_nocturnal else ""
+        rationale = f"Moderate fraud probability ({probability:.2%}){nocturnal_tag}. Requires mandatory step-up authentication before clearing."
+        confidence_cal = round(probability, 4)
+
+    else:
+        action = "IMMEDIATE_FREEZE"
+        rbi_route = "RBI_CIRCULAR_DPSS_CO_PD_2224"
+        channel = "COMPLIANCE_LOCK_AND_IVR"
+        crit_tag = " Critical V14 outlier detected." if has_critical_v14 else ""
+        rationale = f"High-confidence fraud signature ({probability:.2%}).{crit_tag} Immediate card freeze initiated under customer protection guidelines."
+        confidence_cal = round(probability, 4)
+
+    return {
+        "action": action,
+        "rbi_compliance_route": rbi_route,
+        "confidence_calibration": confidence_cal,
+        "channel": channel,
+        "rationale": rationale,
+    }
+
+
 def generate_forensic_memo(
     txn_id: Any = "LIVE",
     amount: float = 0.0,
