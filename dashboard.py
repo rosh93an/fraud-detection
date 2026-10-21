@@ -126,7 +126,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("Architecture Stack")
-    st.markdown("""
+    st.markdown(r"""
     - **Tier-1**: XGBoost (31 Features, < 5ms)
     - **Attribution**: TreeSHAP Local Odds
     - **System-1**: LLM-as-Jev (< 80ms Router)
@@ -460,7 +460,7 @@ with tab2:
 # -----------------------------------------------------------------------------
 with tab3:
     st.subheader("Regulatory Compliance & Architectural Foundations")
-    st.markdown("""
+    st.markdown(r"""
     ### Alignment with Reserve Bank of India (RBI) Directives
     SentinelPay embeds RBI regulatory mandates into its System-1 decision routing logic:
     
