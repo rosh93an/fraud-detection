@@ -70,7 +70,7 @@ flowchart TD
 ---
 
 ### B. Production Microservices Stack (`docker-compose.yml`)
-The platform runs 4 autonomous, containerized microservices orchestrated via Docker Compose:
+The platform runs 5 autonomous, containerized microservices orchestrated via Docker Compose:
 1. **`fraud-postgres`** (`postgres:17`):
    - Stores transactions, timestamps, risk probabilities, latencies, and input features for audit trails.
 2. **`fraud-redpanda`** (`redpandadata/redpanda:latest`):
@@ -84,7 +84,10 @@ The platform runs 4 autonomous, containerized microservices orchestrated via Doc
    - Volumes mounted for hot-reloading models and streaming scripts.
 4. **`fraud-streaming-consumer`** (`python:3.12-slim`):
    - Autonomous background streaming worker consuming from the `transactions` topic 24/7.
-   - Evaluates incoming payments against XGBoost and performs real-time SHAP analysis.
+   - Evaluates incoming payments against XGBoost, computes TreeSHAP, and routes actions via `evaluate_jev_decision()`.
+5. **`fraud-dashboard`** (`python:3.12-slim`):
+   - Institutional Streamlit visual command center on port **8501**.
+   - Features 1-click scenario simulation, TreeSHAP waterfall charts, Jev decision pills, agentic MCP tools, and risk officer chat.
 
 ---
 
@@ -194,54 +197,46 @@ When a freelance client brings a completely different dataset (e.g. 12 columns f
 
 ## 5. Complete Implementation Roadmap: What We Will Do Next
 
-### Phase 1: `evaluate_jev_decision()` (System-1 Typed Decision Router)
-* **File**: `api/forensic_agent.py` & `api/app.py`
-* Implement fast categorical routing using the LLM-as-Jev paradigm.
-* Outputs strictly typed decisions in under 80ms using minimal tokens:
+### Phase 1: `evaluate_jev_decision()` (System-1 Typed Decision Router) - [COMPLETED & VERIFIED]
+* **Files**: `api/forensic_agent.py`, `api/app.py`, `Kafka_scripts/kafka_consumer.py`
+* Fast categorical routing using the LLM-as-Jev paradigm.
+* Outputs strictly typed decisions in under 0.1ms with 0-token deterministic fallback:
   ```json
   {
     "action": "STEP_UP_2FA_CHALLENGE",
-    "rbi_compliance_route": "NOCTURNAL_BURST_POLICY",
-    "confidence_calibration": 0.945,
-    "channel": "SMS_OTP"
+    "rbi_compliance_route": "RBI_2FA_ADDITIONAL_FACTOR_AUTHENTICATION_MANDATE",
+    "confidence_calibration": 0.8361,
+    "channel": "SMS_OTP",
+    "rationale": "Moderate fraud probability (83.61%) during nocturnal hours. Requires mandatory step-up authentication before clearing."
   }
   ```
-* Seamlessly attach this decision to `/predict` and `/investigate` responses.
+* Seamlessly integrated into `/predict`, `/investigate`, and continuous Kafka streaming.
 
 ---
 
-### Phase 2: Streamlit Visual Command Center (`dashboard.py`)
-Build an institutional-grade web dashboard featuring:
-1. **Header & Live Metrics**:
-   - Total Transactions, Fraud Intercepted, Average Latency, and Currency Selector (**₹ INR** default / $ USD).
-2. **Interactive Transaction Simulator**:
-   - 1-click test scenarios: *"Legitimate Chai Payment (₹150)"* vs *"High-Risk Carding Attack (₹14,960)"*.
-   - Parameter sliders to test custom values in real time.
-3. **Jev-Style Decision Badge**:
-   - Visual status pill: `🟢 APPROVE_INSTANT` | `🟡 CHALLENGE_2FA_OTP` | `🔴 IMMEDIATE_FREEZE`.
-4. **LLM-as-a-Judge Regulatory Badge**:
-   - Real-time audit verification verdict confirming adherence to RBI guidelines.
-5. **Interactive SHAP Waterfall Bar Chart**:
-   - Plotly visualization showing exact positive (red) vs negative (blue) feature pulls.
-6. **GenAI Forensic Memorandum Card**:
-   - Formatted Markdown report synthesized by Groq/Gemini.
-7. **Agentic Action Tools (MCP Simulation)**:
-   - Interactive buttons: 🛑 *Freeze Card*, 📱 *Dispatch 2FA OTP*, ✅ *Mark False Positive*.
-8. **Interactive Analyst Chat**:
-   - Live query box to chat directly with the Forensic Investigator Agent about the transaction.
-9. **Live PostgreSQL Audit History Table**:
-   - Searchable, exportable table of all past transactions.
+### Phase 2: Streamlit Visual Command Center (`dashboard.py`) - [COMPLETED & VERIFIED]
+* **File**: `dashboard.py` (489 lines)
+* Built an institutional-grade web command center featuring:
+  1. **Header & Live Metrics**: Total Transactions, Caught Fraud, Settlement Rate, and Sub-5ms Latency Gauge.
+  2. **Indian Currency Rail**: Native **₹ INR** (default) or $ USD toggle.
+  3. **1-Click Test Scenarios**: *"Legitimate Chai (₹150)"*, *"UPI Recharge (₹2,499)"*, *"Nocturnal Carding (₹14,960)"*.
+  4. **Jev-Style Decision Badge**: Visual pills (`🟢 APPROVE_INSTANT`, `🟡 STEP_UP_2FA_CHALLENGE`, `🔴 IMMEDIATE_FREEZE`).
+  5. **Interactive TreeSHAP Waterfall Chart**: Dynamic Plotly visual showing red (+) vs blue (-) feature log-odds pulls.
+  6. **Tier-2 GenAI Forensic Memorandum Card**: Automated Markdown compliance report from Groq/Gemini.
+  7. **Agentic Action Tools (MCP Simulation)**: Interactive buttons (🛑 *Freeze Card*, 📱 *Dispatch 2FA OTP*, ✅ *Whitelist FP*).
+  8. **Interactive Risk Analyst Chat**: Chat interface directly answering queries about the active transaction.
+  9. **Live PostgreSQL Audit History Table**: Real-time table pulled from `GET /recent`.
 
 ---
 
-### Phase 3: Dockerize Dashboard & Expose on EC2 (Port 8501)
-* Add `dashboard` service to `docker-compose.yml`.
-* Map port `8501:8501`.
-* Add security group rule for Port 8501 so the dashboard is accessible from any web browser worldwide.
+### Phase 3: Dockerize Dashboard on EC2 (Port 8501) - [COMPLETED & VERIFIED]
+* Containerized `fraud-dashboard` service added to `docker-compose.yml`.
+* Mapped port `8501:8501`.
+* Live on AWS EC2 Mumbai at: `http://13.204.85.136:8501` (or via SSH tunnel `localhost:8501`).
 
 ---
 
-### Phase 4: Final Merge to `main` & CI/CD Secret Update
+### Phase 4: Final Merge to `main` & CI/CD Secret Update - [READY TO EXECUTE]
 * Merge branch `feature/shap-explainability` into `main`.
 * Update GitHub Actions Secret `EC2_HOST` with current public IP `13.204.85.136`.
 * Verify automated CI/CD pipeline tests and deployments.
