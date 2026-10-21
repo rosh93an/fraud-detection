@@ -98,15 +98,20 @@ def main():
                 raw_data=full_data
             )
 
+            top_factors = []
             if prediction == "FRAUD":
                 fraud_count += 1
                 tag = "🚨 FRAUD "
+                top_factors = get_top_shap_factors(features, explainer, feature_names, top_n=3)
             else:
                 normal_count += 1
                 tag = "   normal"
 
             print(f"[txn {txn_id:4}] {tag} prob={probability:.4f} "
                   f"risk={risk_level:6s} amount={txn.get('Amount')}")
+            if top_factors:
+                drivers_str = ", ".join(f"{f['feature']}({f['shap_impact']:+.2f})" for f in top_factors)
+                print(f"         └── SHAP Drivers: {drivers_str}")
 
     except KeyboardInterrupt:
         print(f"\nStopped. FRAUD={fraud_count}  NORMAL={normal_count}")
