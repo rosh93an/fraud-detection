@@ -2,7 +2,10 @@ import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
-import shap 
+try:
+    import shap
+except ImportError:
+    shap = None 
 
 #paths these works onnly in local we updated it into app.py 
 #MODEL_PATH=Path('../models/fraud_model_xgb.pkl')
@@ -65,12 +68,16 @@ def get_risk_level(probability:float):
 
 def create_explainer(model):
     """Initialize TreeExplainer once at startup"""
+    if shap is None:
+        return None
     return shap.TreeExplainer(model)
 
 def get_top_shap_factors(features_array, explainer, feature_names, top_n=5):
     """
     Calculate SHAP values for the transaction and return top N factors.
     """
+    if explainer is None or shap is None:
+        return []
     # features_array shape: (1, 30)
     shap_vals = explainer.shap_values(features_array)
     

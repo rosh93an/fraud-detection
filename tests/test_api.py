@@ -89,3 +89,23 @@ def test_hour_feature():
     print("Hour feature test passed ✅")
 
 
+
+
+def test_evaluate_jev_decision_approve():
+    from api.forensic_agent import evaluate_jev_decision
+    res = evaluate_jev_decision(probability=0.02, amount=150.0, hour=14)
+    assert res["action"] == "APPROVE_INSTANT"
+    assert res["rbi_compliance_route"] == "STANDARD_CLEARING_ROUTE"
+    assert res["channel"] == "DIRECT_SETTLEMENT"
+
+def test_evaluate_jev_decision_challenge():
+    from api.forensic_agent import evaluate_jev_decision
+    res = evaluate_jev_decision(probability=0.65, amount=2499.0, hour=23)
+    assert res["action"] == "STEP_UP_2FA_CHALLENGE"
+    assert "RBI_2FA" in res["rbi_compliance_route"]
+
+def test_evaluate_jev_decision_freeze():
+    from api.forensic_agent import evaluate_jev_decision
+    res = evaluate_jev_decision(probability=0.95, amount=14960.0, hour=3, top_factors=[{"feature": "V14", "value": -7.16}])
+    assert res["action"] == "IMMEDIATE_FREEZE"
+    assert res["channel"] == "COMPLIANCE_LOCK_AND_IVR"
