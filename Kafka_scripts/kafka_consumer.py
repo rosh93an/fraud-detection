@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import joblib
 from kafka import KafkaConsumer
 from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
+from api.forensic_agent import evaluate_jev_decision
 from api.database import create_table, save_prediction
 import time
 
@@ -107,11 +108,22 @@ def main():
                 normal_count += 1
                 tag = "   normal"
 
+            # LLM-as-Jev: Fast Typed Decision Evaluation
+            jev_decision = evaluate_jev_decision(
+                probability=probability,
+                amount=txn.get("Amount", 0.0),
+                hour=engineered.get("Hour"),
+                top_factors=top_factors
+            )
+
             print(f"[txn {txn_id:4}] {tag} prob={probability:.4f} "
                   f"risk={risk_level:6s} amount={txn.get('Amount')}")
             if top_factors:
                 drivers_str = ", ".join(f"{f['feature']}({f['shap_impact']:+.2f})" for f in top_factors)
-                print(f"         └── SHAP Drivers: {drivers_str}")
+                print(f"         ├── SHAP Drivers: {drivers_str}")
+                print(f"         └── Jev Action  : {jev_decision['action']} [{jev_decision['channel']}] ({jev_decision['rbi_compliance_route']})")
+            else:
+                print(f"         └── Jev Action  : {jev_decision['action']} [{jev_decision['channel']}]")
 
     except KeyboardInterrupt:
         print(f"\nStopped. FRAUD={fraud_count}  NORMAL={normal_count}")
