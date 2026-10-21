@@ -19,11 +19,13 @@ COPY models/ ./models/
 
 #copy apicode
 COPY api/ ./api/
+COPY dashboard.py ./
 
 ENV PYTHONPATH=/app
 
 #tell docker which code app uses 
 EXPOSE 8000
+EXPOSE 8501
 
 #command to run when container starts
 CMD ["uvicorn","api.app:app","--host","0.0.0.0","--port","8000"]

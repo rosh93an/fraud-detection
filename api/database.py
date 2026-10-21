@@ -124,3 +124,27 @@ def get_stats():
 
                  
 
+
+
+def get_recent_predictions(limit: int = 25):
+    """Retrieve recent predictions for the audit feed."""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, prediction, probability, risk_level, amount, latency_ms, hour, created_at
+            FROM predictions
+            ORDER BY id DESC
+            LIMIT %s
+        """, (limit,))
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.error(f"Error fetching recent predictions: {e}")
+        return []
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()

@@ -1,5 +1,3 @@
-
-
 services:
   db:
     image: postgres:17
@@ -37,7 +35,6 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      #test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3 
@@ -66,7 +63,6 @@ services:
       - "9092:9092"
     restart: unless-stopped
 
-
   fraud-consumer:
     build: .
     env_file: .env
@@ -86,6 +82,22 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  dashboard:
+    build: .
+    env_file: .env
+    container_name: fraud-dashboard
+    command: ["streamlit", "run", "dashboard.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://fraud-api:8000
+      - DATABASE_URL=postgresql://frauduser:fraudpass@db:5432/frauddb
+    depends_on:
+      - fraud-api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
-

@@ -6,7 +6,7 @@ import logging
 import numpy as np
 import joblib
 from pathlib import Path
-from api.database import create_table, save_prediction, get_stats
+from api.database import create_table, save_prediction, get_stats, get_recent_predictions
 from api.forensic_agent import generate_forensic_memo, evaluate_jev_decision
 from typing import Optional, Any, Dict
 from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
@@ -245,3 +245,9 @@ async def stats():
 
 
     
+
+
+@app.get("/recent")
+async def recent(limit: int = 25):
+    """Fetch recent transaction predictions for real-time audit feed."""
+    return get_recent_predictions(limit=limit)
