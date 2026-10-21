@@ -10,3 +10,5 @@ imbalanced-learn==0.12.3
 python-multipart==0.0.29
 psycopg2-binary==2.9.12
 pytest
+kafka-python
+shap>=0.45.0

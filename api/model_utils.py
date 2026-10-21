@@ -2,6 +2,7 @@ import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import shap 
 
 #paths these works onnly in local we updated it into app.py 
 #MODEL_PATH=Path('../models/fraud_model_xgb.pkl')
@@ -61,3 +62,27 @@ def get_risk_level(probability:float):
     else:
         return "SAFE"
 
+
+def create_explainer(model):
+    """Initialize TreeExplainer once at startup"""
+    return shap.TreeExplainer(model)
+
+def get_top_shap_factors(features_array, explainer, feature_names, top_n=5):
+    """
+    Calculate SHAP values for the transaction and return top N factors.
+    """
+    # features_array shape: (1, 30)
+    shap_vals = explainer.shap_values(features_array)
+    
+    # Pair feature names with their SHAP impact and raw value
+    factors = []
+    for name, raw_val, impact in zip(feature_names, features_array[0], shap_vals[0]):
+        factors.append({
+            "feature": name,
+            "value": round(float(raw_val), 4),
+            "shap_impact": round(float(impact), 4)
+        })
+    
+    # Sort by absolute impact (highest positive or negative influence first)
+    factors.sort(key=lambda x: abs(x["shap_impact"]), reverse=True)
+    return factors[:top_n]

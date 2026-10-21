@@ -4,11 +4,10 @@ from contextlib import asynccontextmanager
 import time
 import logging
 import numpy as np
-from api.model_utils import preprocess_input,get_risk_level
-import os
 import joblib
 from pathlib import Path
 from api.database import create_table, save_prediction, get_stats
+from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
 
 #setup logging
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +51,7 @@ class PredictionResponse(BaseModel):
     prediction: str
     probability: float
     risk_level:str
+    top_factors: list[dict] = []
     latency_ms:float
 
 #load model at startup
@@ -70,6 +70,7 @@ async def  lifespan(app:FastAPI):
     app.state.model    = joblib.load(model_path)
     app.state.scaler   = joblib.load(scaler_path)
     app.state.features = joblib.load(features_path)
+    app.state.explainer = create_explainer(app.state.model)
     
     logger.info('model loaded sucessfully')
 
@@ -142,11 +143,22 @@ async def predict (request:TransactionRequest):
             latency_ms=latency_ms,
             raw_data=full_data
         )
+        # Only compute SHAP if high probability or medium risk (to keep latency < 10ms for safe traffic)
+        top_factors = []
+        if probability >= 0.5:
+              top_factors = get_top_shap_factors(
+                features, 
+                app.state.explainer, 
+                app.state.features, 
+                top_n=5
+            )
+
 
         return PredictionResponse(
             prediction=prediction,
             probability=round(probability,4),
             risk_level=risk_level,
+            top_factors=top_factors,
             latency_ms=round(latency_ms,2)
         )
     except Exception as e:
@@ -155,6 +167,7 @@ async def predict (request:TransactionRequest):
             status_code=500,
             detail=f"prediction failed :{str(e)}"
         )
+    
     
 #--root--
 @app.get("/")
