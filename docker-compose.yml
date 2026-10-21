@@ -26,6 +26,7 @@ services:
       - "8000:8000"
     volumes:
       - ./models:/app/models
+      - ./Kafka_scripts:/app/Kafka_scripts
     environment:
       - PYTHONUNBUFFERED=1
       - DATABASE_URL=postgresql://frauduser:fraudpass@db:5432/frauddb
@@ -57,12 +58,32 @@ services:
       - "0"
       - --check=false
       - --kafka-addr
-      - "PLAINTEXT://0.0.0.0:9092"
+      - "PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092"
       - --advertise-kafka-addr
-      - "PLAINTEXT://localhost:9092"
+      - "PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092"
     ports:
       - "9092:9092"
     restart: unless-stopped
 
+
+  fraud-consumer:
+    build: .
+    container_name: fraud-streaming-consumer
+    command: ["python", "Kafka_scripts/kafka_consumer.py"]
+    volumes:
+      - ./models:/app/models
+      - ./Kafka_scripts:/app/Kafka_scripts
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://frauduser:fraudpass@db:5432/frauddb
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
+    depends_on:
+      db:
+        condition: service_healthy
+      redpanda:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+

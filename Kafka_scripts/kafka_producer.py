@@ -18,7 +18,9 @@ import random
 import time
 from kafka import KafkaProducer
 
-BOOTSTRAP_SERVERS = ["localhost:9092"]
+import os
+KAFKA_HOST = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+BOOTSTRAP_SERVERS = [KAFKA_HOST]
 TOPIC = "transactions"
 
 

@@ -23,12 +23,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import joblib
 from kafka import KafkaConsumer
-from api.model_utils import preprocess_input, get_risk_level
+from api.model_utils import preprocess_input, get_risk_level, create_explainer, get_top_shap_factors
 from api.database import create_table, save_prediction
 import time
 
 
-BOOTSTRAP_SERVERS = ["localhost:9092"]
+KAFKA_HOST = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+BOOTSTRAP_SERVERS = [KAFKA_HOST]
 TOPIC = "transactions"
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "fraud_model_xgb.pkl")
@@ -39,20 +40,32 @@ def main():
     print("Loading model and scaler ...")
     model = joblib.load(MODEL_PATH)
     scaler = joblib.load(SCALER_PATH)
-    print("Model loaded.\n")
+    features_path = os.path.join(os.path.dirname(__file__), "..", "models", "feature_names.pkl")
+    feature_names = joblib.load(features_path)
+    explainer = create_explainer(model)
+    print("Model, Scaler, and SHAP Explainer loaded successfully.\n")
 
     print("Ensuring predictions table exists ...")
     create_table()
 
     print(f"Connecting to Kafka at {BOOTSTRAP_SERVERS} ...")
-    consumer = KafkaConsumer(
-        TOPIC,
-        bootstrap_servers=BOOTSTRAP_SERVERS,
-        value_deserializer=lambda v: json.loads(v.decode("utf-8")),
-        auto_offset_reset="earliest",   # start from the beginning of the topic
-        enable_auto_commit=True,
-        group_id="fraud-consumer-group"
-    )
+    consumer = None
+    for attempt in range(1, 11):
+        try:
+            consumer = KafkaConsumer(
+                TOPIC,
+                bootstrap_servers=BOOTSTRAP_SERVERS,
+                value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+                auto_offset_reset="earliest",
+                enable_auto_commit=True,
+                group_id="fraud-consumer-group"
+            )
+            break
+        except Exception as err:
+            print(f"Waiting for Kafka/Redpanda ({attempt}/10): {err} ...")
+            time.sleep(3)
+    if not consumer:
+        sys.exit("Could not connect to Kafka broker. Exiting.")
 
     print(f"Connected. Listening to topic '{TOPIC}' ...")
     print("Press Ctrl+C to stop.\n")
